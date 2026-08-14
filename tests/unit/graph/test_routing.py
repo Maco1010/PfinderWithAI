@@ -5,6 +5,7 @@ from pfinder_ai.domain.models import IncidentInput, InvestigationTarget, SystemC
 from pfinder_ai.graph.routing import (
     route_after_clue_extraction,
     route_after_decision,
+    route_after_log_collection,
     route_after_start_context,
     route_after_target_context,
     route_after_target_selection,
@@ -80,3 +81,14 @@ def test_decision_route_respects_action_and_termination() -> None:
 
     state["termination_reason"] = "达到最大调查深度"
     assert route_after_decision(state) == "build_result"
+
+
+def test_log_failure_routes_through_central_decision() -> None:
+    """日志节点请求切换候选时，必须先应用统一预算和终止规则。"""
+
+    state = _base_state()
+    state["next_action"] = NextAction.SELECT_TRACE_CANDIDATE
+    assert route_after_log_collection(state) == "decision_router"
+
+    state["next_action"] = NextAction.INVESTIGATE_CODE
+    assert route_after_log_collection(state) == "investigate_code"

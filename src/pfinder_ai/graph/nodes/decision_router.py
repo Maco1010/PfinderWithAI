@@ -47,12 +47,13 @@ class DecisionRouterNode:
         else:
             action, termination_reason = self._ensure_executable_action(state, action)
 
+        current_target = state.get("current_target")
         step = InvestigationStep(
             step_id=make_step_id(state, "decision_router"),
             name="decision_router",
             target_system=(
-                state["current_target"].system
-                if state.get("current_target") is not None
+                current_target.system
+                if current_target is not None
                 else None
             ),
             decision=termination_reason or f"继续执行动作 {action.value}",

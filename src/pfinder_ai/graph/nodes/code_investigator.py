@@ -4,7 +4,7 @@ from dataclasses import dataclass
 
 from pfinder_ai.domain.enums import ErrorKind, EvidenceSource, NextAction
 from pfinder_ai.domain.errors import InvalidInvestigationInputError, PfinderAIError, ProviderError
-from pfinder_ai.domain.models import Evidence, InvestigationStep
+from pfinder_ai.domain.models import InvestigationStep
 from pfinder_ai.graph.nodes.common import make_error_record, make_step_id
 from pfinder_ai.graph.state import InvestigationState
 from pfinder_ai.ports.code_analysis import (

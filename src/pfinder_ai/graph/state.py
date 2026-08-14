@@ -21,6 +21,7 @@ from pfinder_ai.domain.models import (
 )
 from pfinder_ai.ports.code_analysis import SupplementalEvidenceRequest
 
+
 def _merge_unique[T](
     left: tuple[T, ...],
     right: tuple[T, ...],

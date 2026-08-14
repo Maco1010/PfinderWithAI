@@ -9,6 +9,7 @@ type InputRoute = Literal["resolve_start_context", "build_result"]
 type ContextRoute = Literal["find_trace", "build_result"]
 type TargetRoute = Literal["resolve_target_context", "build_result"]
 type TargetContextRoute = Literal["gather_logs", "select_target", "build_result"]
+type LogRoute = Literal["investigate_code", "decision_router"]
 type DecisionRoute = Literal[
     "gather_logs",
     "investigate_code",
@@ -58,6 +59,14 @@ def route_after_target_context(state: InvestigationState) -> TargetContextRoute:
     ):
         return "select_target"
     return "build_result"
+
+
+def route_after_log_collection(state: InvestigationState) -> LogRoute:
+    """日志失败时先进入统一决策，成功时继续调查代码。"""
+
+    if state.get("next_action") is NextAction.SELECT_TRACE_CANDIDATE:
+        return "decision_router"
+    return "investigate_code"
 
 
 def route_after_decision(state: InvestigationState) -> DecisionRoute:
