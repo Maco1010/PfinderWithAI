@@ -1,6 +1,7 @@
 """LangGraph 主调查流程使用的可序列化状态。"""
 
 from collections.abc import Callable, Hashable
+from datetime import datetime
 from typing import Annotated, TypedDict
 
 from pfinder_ai.domain.enums import ExecutionStatus, NextAction
@@ -183,6 +184,7 @@ class InvestigationState(TypedDict, total=False):
     ]
     pending_requests: tuple[SupplementalEvidenceRequest, ...]
     next_hops: Annotated[tuple[NextHop, ...], merge_next_hops]
+    enqueued_next_hop_ids: Annotated[tuple[str, ...], merge_strings]
     unresolved_questions: Annotated[tuple[str, ...], merge_strings]
 
     investigation_steps: Annotated[tuple[InvestigationStep, ...], merge_steps]
@@ -191,6 +193,7 @@ class InvestigationState(TypedDict, total=False):
 
     investigation_depth: int
     provider_call_count: int
+    started_at: datetime
     execution_status: ExecutionStatus
     next_action: NextAction | None
     termination_reason: str | None

@@ -31,6 +31,7 @@ class CodeInvestigationRequest:
     target: InvestigationTarget
     workspace: WorkspaceHandle
     trace_and_log_evidence: tuple[Evidence, ...]
+    search_hints: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -52,4 +53,3 @@ class CodeAnalysisProvider(Protocol):
         """在受限工作区内执行只读代码调查。"""
 
         ...
-

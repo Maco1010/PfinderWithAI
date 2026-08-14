@@ -1,7 +1,7 @@
 """多个调查节点共享的审计辅助函数。"""
 
 from pfinder_ai.domain.errors import PfinderAIError
-from pfinder_ai.domain.models import InvestigationErrorRecord
+from pfinder_ai.domain.models import InvestigationErrorRecord, NextHop
 from pfinder_ai.graph.state import InvestigationState
 
 
@@ -48,3 +48,12 @@ def merge_text_values(left: tuple[str, ...], right: tuple[str, ...]) -> tuple[st
         if item not in merged:
             merged.append(item)
     return tuple(merged)
+
+
+def next_hop_id(next_hop: NextHop) -> str:
+    """根据目标系统和发现证据生成稳定的 Trace 外依赖编号。"""
+
+    return (
+        f"{next_hop.target_system.casefold()}:"
+        f"{next_hop.discovered_by_evidence_id}"
+    )
