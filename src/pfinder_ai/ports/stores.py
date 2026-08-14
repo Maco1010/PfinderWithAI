@@ -12,6 +12,20 @@ from pfinder_ai.domain.models import (
 class InvestigationStore(Protocol):
     """保存面向审计和回放的调查轨迹，不承担图检查点职责。"""
 
+    async def save_incident(
+        self,
+        investigation_id: str,
+        incident: IncidentInput,
+    ) -> None:
+        """幂等保存一次调查的标准化原始输入。"""
+
+        ...
+
+    async def load_incident(self, investigation_id: str) -> IncidentInput | None:
+        """读取调查输入，供回放和恢复前校验。"""
+
+        ...
+
     async def append_step(self, investigation_id: str, step: InvestigationStep) -> None:
         """幂等追加一个调查步骤。"""
 
@@ -50,4 +64,3 @@ class CaseMemoryProvider(Protocol):
         """保存已经确认或明确标注置信度的案例。"""
 
         ...
-

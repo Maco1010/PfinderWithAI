@@ -11,6 +11,7 @@ from pfinder_ai.domain.models import (
     DiagnosisResult,
     Evidence,
     Hypothesis,
+    IncidentInput,
     InvestigationStep,
     SystemContext,
     TraceCandidate,
@@ -218,8 +219,30 @@ class InMemoryInvestigationStore:
     """测试使用的审计存储，不提供进程间恢复能力。"""
 
     def __init__(self) -> None:
+        self._incidents: dict[str, IncidentInput] = {}
         self._steps: dict[str, list[InvestigationStep]] = {}
         self._results: dict[str, DiagnosisResult] = {}
+
+    async def save_incident(
+        self,
+        investigation_id: str,
+        incident: IncidentInput,
+    ) -> None:
+        """保存合成调查输入，相同编号重复写入必须一致。"""
+
+        existing = self._incidents.get(investigation_id)
+        if existing is not None and existing != incident:
+            raise ProviderError(
+                "同一调查编号对应了不同输入",
+                kind=ErrorKind.INVALID_INPUT,
+                retryable=False,
+            )
+        self._incidents[investigation_id] = incident
+
+    async def load_incident(self, investigation_id: str) -> IncidentInput | None:
+        """返回内存中的调查输入。"""
+
+        return self._incidents.get(investigation_id)
 
     async def append_step(
         self,
