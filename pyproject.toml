@@ -1,0 +1,50 @@
+[project]
+name = "pfinder-with-ai"
+version = "0.1.0"
+description = "Evidence-driven root-cause investigation agent for microservice systems."
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "langgraph>=1.0",
+    "openai-codex",
+    "pydantic>=2.10",
+    "pydantic-settings>=2.7",
+    "rich>=13.9",
+    "typer>=0.15",
+]
+
+[project.scripts]
+pfinder-ai = "pfinder_ai.cli:main"
+
+[dependency-groups]
+dev = [
+    "mypy>=1.14",
+    "pytest>=8.3",
+    "pytest-asyncio>=0.25",
+    "ruff>=0.9",
+]
+
+[build-system]
+requires = ["uv_build>=0.11.32,<0.12"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = "pfinder_ai"
+
+[tool.pytest.ini_options]
+addopts = "-ra"
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["B", "E", "F", "I", "UP"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+packages = ["pfinder_ai"]
+
