@@ -63,6 +63,7 @@ class TraceAnalysisService:
                         source=TargetSource.TRACE_CANDIDATE,
                         reason=reason,
                         priority=priority,
+                        trace_id=candidate.trace_id,
                         operation=span.operation,
                         span_id=span.span_id,
                     )
@@ -105,4 +106,3 @@ class TraceAnalysisService:
         if self._is_anomalous(span):
             return f"Span 状态异常：{span.status}"
         return "Trace 未包含显式错误，选择最高耗时 Span 作为调查入口"
-

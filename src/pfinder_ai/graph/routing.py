@@ -8,6 +8,7 @@ from pfinder_ai.graph.state import InvestigationState
 type InputRoute = Literal["resolve_start_context", "build_result"]
 type ContextRoute = Literal["find_trace", "build_result"]
 type TargetRoute = Literal["resolve_target_context", "build_result"]
+type TargetContextRoute = Literal["gather_logs", "select_target", "build_result"]
 type DecisionRoute = Literal[
     "gather_logs",
     "investigate_code",
@@ -40,6 +41,23 @@ def route_after_target_selection(state: InvestigationState) -> TargetRoute:
     if state.get("current_target") is None:
         return "build_result"
     return "resolve_target_context"
+
+
+def route_after_target_context(state: InvestigationState) -> TargetContextRoute:
+    """目标上下文解析失败时切换候选，不把错误上下文传给日志节点。"""
+
+    if state.get("termination_reason"):
+        return "build_result"
+    if state.get("current_context") is not None:
+        return "gather_logs"
+
+    visited = set(state.get("visited_target_ids", ()))
+    if any(
+        target.target_id not in visited
+        for target in state.get("target_queue", ())
+    ):
+        return "select_target"
+    return "build_result"
 
 
 def route_after_decision(state: InvestigationState) -> DecisionRoute:

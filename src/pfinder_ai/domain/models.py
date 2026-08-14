@@ -96,6 +96,7 @@ class InvestigationTarget(DomainModel):
     source: TargetSource
     reason: str = Field(min_length=1)
     priority: int = Field(ge=0)
+    trace_id: str | None = None
     operation: str | None = None
     span_id: str | None = None
 

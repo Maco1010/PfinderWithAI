@@ -6,6 +6,7 @@ from pfinder_ai.graph.routing import (
     route_after_clue_extraction,
     route_after_decision,
     route_after_start_context,
+    route_after_target_context,
     route_after_target_selection,
 )
 from pfinder_ai.graph.state import InvestigationState
@@ -44,16 +45,30 @@ def test_context_and_target_routes_require_resolved_values() -> None:
     assert route_after_target_selection(state) == "build_result"
 
     state["start_context"] = SystemContext(system="system-a")
-    state["current_target"] = InvestigationTarget(
+    current_target = InvestigationTarget(
         target_id="trace-1:span-2",
         system="system-b",
         source=TargetSource.TRACE_CANDIDATE,
         reason="显式错误",
         priority=0,
     )
+    next_target = InvestigationTarget(
+        target_id="trace-1:span-3",
+        system="system-c",
+        source=TargetSource.TRACE_CANDIDATE,
+        reason="上游超时",
+        priority=1,
+    )
+    state["current_target"] = current_target
+    state["target_queue"] = (current_target, next_target)
+    state["visited_target_ids"] = (current_target.target_id,)
 
     assert route_after_start_context(state) == "find_trace"
     assert route_after_target_selection(state) == "resolve_target_context"
+    assert route_after_target_context(state) == "select_target"
+
+    state["current_context"] = SystemContext(system="system-b")
+    assert route_after_target_context(state) == "gather_logs"
 
 
 def test_decision_route_respects_action_and_termination() -> None:

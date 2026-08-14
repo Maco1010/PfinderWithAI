@@ -35,5 +35,5 @@ def test_anomalous_span_is_selected_before_slow_success_span() -> None:
 
     assert result.targets[0].system == "system-d"
     assert result.targets[0].source is TargetSource.TRACE_CANDIDATE
+    assert result.targets[0].trace_id == "trace-001"
     assert result.evidence[0].locator == "trace_id=trace-001;span_id=span-error"
-

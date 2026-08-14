@@ -1,7 +1,7 @@
 """LangGraph 主调查流程使用的可序列化状态。"""
 
 from collections.abc import Callable, Hashable
-from typing import Annotated, Required, TypedDict
+from typing import Annotated, TypedDict
 
 from pfinder_ai.domain.enums import ExecutionStatus, NextAction
 from pfinder_ai.domain.models import (
@@ -159,8 +159,9 @@ class InvestigationState(TypedDict, total=False):
     完整提示词或 CodeInvestigator 的内部对话。
     """
 
-    investigation_id: Required[str]
-    incident: Required[IncidentInput]
+    # 应用服务创建图输入时必须提供这两个字段；节点更新可以只返回局部字段。
+    investigation_id: str
+    incident: IncidentInput
 
     start_context: SystemContext
     current_context: SystemContext | None
@@ -180,6 +181,7 @@ class InvestigationState(TypedDict, total=False):
         tuple[SupplementalEvidenceRequest, ...],
         merge_supplemental_requests,
     ]
+    pending_requests: tuple[SupplementalEvidenceRequest, ...]
     next_hops: Annotated[tuple[NextHop, ...], merge_next_hops]
     unresolved_questions: Annotated[tuple[str, ...], merge_strings]
 
