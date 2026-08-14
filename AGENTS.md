@@ -4,7 +4,19 @@
 
 PfinderWithAI 是一个面向企业级微服务场景的根因定位 Agent。它接收线上问题描述，结合系统代码、日志和调用关系，沿跨系统调用链逐层分析，最终给出可追溯的根因判断或下一步调查建议。
 
-当前仓库处于需求澄清和架构探索阶段。产品背景与初步设想以 `docs/Requirements.md` 为主要依据；`README.md` 仅提供项目简介。
+当前仓库已完成第一版代码骨架和全合成纵向链路，仍处于真实企业能力接入前的架构验证阶段。产品范围以 `docs/Requirements.md` 为准，当前实现状态和可执行命令见 `README.md`，跨设备接力上下文见 `memory/PROJECT_MEMORY.md`。
+
+## 技术栈与命令
+
+- Python 3.12，使用 uv 管理项目和锁文件。
+- LangGraph 负责主调查状态图，Pydantic 负责领域与结构化输出校验。
+- Typer/Rich 提供 CLI，SQLite 保存本地调查轨迹。
+- 安装：`uv sync --dev`
+- 格式与静态检查：`uv run ruff check src tests`、`uv run mypy src/pfinder_ai`
+- 测试：`uv run pytest tests -q`
+- Fake Demo：`uv run pfinder-ai investigate "订单创建失败" --start-system system-a --trace-id trace-synthetic`
+
+新增或修改 Python 注释和 docstring 时统一使用中文；标识符、协议字段和第三方 API 名称保持其规范写法。
 
 ## 当前阶段目标
 
@@ -75,13 +87,13 @@ PfinderWithAI 是一个面向企业级微服务场景的根因定位 Agent。它
 - 安全：敏感信息脱敏、越权数据源和外部调用边界。
 - 可追溯性：最终结论能够回溯到每一步查询和证据。
 
-在项目尚未确定构建工具前，不虚构测试命令。引入工具链时，应同步更新本文件和 `README.md`，写明可直接执行的安装、检查、测试和运行命令。
+上述命令是当前仓库的真实工具链。新增依赖或改变命令时，应同步更新本文件、`README.md` 和 `uv.lock`。
 
 ## Agent 工作流程
 
 处理仓库任务时：
 
-1. 先阅读 `docs/Requirements.md`、本文件及任务涉及目录中的说明。
+1. 先阅读 `docs/Requirements.md`、本文件、`memory/PROJECT_MEMORY.md` 及任务涉及目录中的说明。
 2. 检查当前仓库状态，尊重已有未提交修改。
 3. 若需求与技术选型尚不明确，优先产出最小接口、验证方案或 ADR，不擅自扩大范围。
 4. 实现后运行已有的格式化、静态检查和测试；若工具尚不存在，明确说明实际完成的验证。

@@ -188,6 +188,10 @@ PfinderWithAI/
 |   |-- DemoAcceptance.md
 |   `-- InvestigationStateFlow.md
 |
+|-- memory/
+|   |-- README.md
+|   `-- PROJECT_MEMORY.md
+|
 |-- src/
 |   `-- pfinder_ai/
 |       |-- __init__.py
@@ -282,6 +286,7 @@ PfinderWithAI/
 | `tests/contract/` | 验证 Fake 与未来真实 Adapter 是否遵守相同的 Port 契约。 |
 | `tests/integration/` | 验证 LangGraph、SQLite、Git 工作区和 Codex 等组件组合。 |
 | `tests/fixtures/` | 保存合成或彻底匿名化的 Trace、日志和代码仓库测试数据。 |
+| `memory/` | 保存可提交的跨设备开发上下文和接力说明；它不是运行时 CaseMemoryProvider 的数据目录。 |
 
 ### 5. Git Adapter 与 GitWorkspaceManager 的分工
 
@@ -336,4 +341,18 @@ GitCliRepositoryAdapter 第一版遵守以下约束：
 - README 和 AGENTS.md 中的安装、运行、检查和测试说明。
 
 初始化阶段不对接 Pfinder、生产日志、系统元数据或真实 LLMProvider，也不实现 HTTP API、前端、RuntimeVerifier 和 Case Memory。
+
+### 7. 当前骨架落地状态
+
+截至 2026-08-15，目录骨架、领域模型、Ports、LangGraph 主图、Fake 纵向链路、Git CLI Adapter、Codex SDK Adapter、SQLite InvestigationStore、UsageMonitor、应用服务和 CLI 已落地。Fake CLI 可以从合成输入运行到结构化诊断结果，并保存输入、步骤和结果。
+
+以下内容仍是明确缺口，不应被描述为已经可用：
+
+- 公司内部 Pfinder、日志、元数据和 LLM API 的真实 Adapter。
+- LangGraph SQLite Checkpointer；现有 SQLite Adapter 只实现 InvestigationStore。
+- CLI 对真实 Codex 和企业数据源的装配及账号联调。
+- 所有 Provider 的 UsageMonitor 统一代理和单次调查用量回写。
+- RuntimeVerifier、HTTP API、前端、权限平台和运行时 Case Memory。
+
+跨设备开发上下文保存到仓库根目录的 `memory/`。该目录只记录项目级事实、决策和接力说明，禁止写入真实日志、凭证、内部地址或客户数据，也不能替代未来的 `CaseMemoryProvider`。
 
