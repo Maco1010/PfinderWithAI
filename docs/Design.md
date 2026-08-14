@@ -92,7 +92,7 @@ Pfinder 无结果或调用链不完整时，主流程降级为基于日志和代
 
 ### 代码工作区边界
 
-企业内部元数据 Provider 负责提供目标系统的 Git 仓库地址以及故障时对应的 commit、tag 或发布版本，不直接向 Agent 提供零散代码内容。`GitWorkspaceManager` 为每次代码调查创建隔离的临时工作区，优先浅克隆指定版本，并将仓库、版本和本地工作区交给 CodeInvestigator。若暂时无法获取线上部署版本，可以在 Demo 中使用约定分支，但必须将版本不确定性记录为调查假设。
+企业内部元数据 Provider 负责提供目标系统的 Git 仓库地址以及故障时对应的 commit、tag 或发布版本，不直接向 Agent 提供零散代码内容。`GitWorkspaceManager` 负责临时工作区的业务策略和生命周期，并通过 `RepositoryWorkspacePort` 调用 `GitCliRepositoryAdapter` 完成具体 Git 操作。它为每次代码调查创建隔离的临时工作区，优先浅克隆指定版本，并将仓库、版本和本地工作区交给 CodeInvestigator。若暂时无法获取线上部署版本，可以在 Demo 中使用约定分支，但必须将版本不确定性记录为调查假设。
 
 GitWorkspaceManager 只允许克隆受信任的内部 Git 域名，凭证通过安全的 credential helper 或服务身份提供，不得拼接到 URL、日志或模型输入中。第一版默认不拉取 submodule 和 Git LFS 大文件，不执行仓库脚本或其他项目代码。Codex 在只读沙箱中分析代码，代码证据必须保留仓库、commit、文件路径和行号。调查完成后清理临时工作区；按仓库和 commit 复用只读缓存作为后续优化，不纳入第一版。
 
@@ -114,7 +114,7 @@ GitWorkspaceManager 只允许克隆受信任的内部 Git 域名，凭证通过�
 2. ContextResolver：根据系统名称调用企业内部元数据 Provider，解析代码库、日志实例、运行环境和 Pfinder 服务标识等确定性上下文。无法唯一解析时返回候选项或补充信息请求，内部地址不能由 LLM 自行生成。
 3. TraceFinder：用于定位问题所在的调用链，这里负责调用 Pfinder 工具的能力，返回调用的拓扑。
 4. TraceAnalyser：用于分析调用链。某个请求可能会定位到一个或者多个调用链，需要先使用确定性逻辑完成筛选、清洗和异常节点识别，再生成带来源定位的结构化摘要和有序候选调查目标队列；只有存在歧义或需要规划调查目标时才调用 LLM。候选目标不是已确认的根因系统。该模块是主状态图中的节点或小型子图，不作为平级自治 Agent。
-5. GitWorkspaceManager：根据 ContextResolver 提供的 Git 地址和目标版本创建隔离的临时只读工作区，负责受信任域名校验、安全凭证使用、克隆范围限制和调查结束后的清理。第一版不拉取 submodule 和 Git LFS 大文件，不执行仓库代码。
+5. GitWorkspaceManager：根据 ContextResolver 提供的 Git 地址和目标版本管理隔离的临时只读工作区，负责受信任域名校验、克隆策略、生命周期和调查结束后的清理。具体 Git 命令通过 `RepositoryWorkspacePort` 委派给 `GitCliRepositoryAdapter`；第一版不拉取 submodule 和 Git LFS 大文件，不执行仓库代码。
 6. CodeInvestigator：作为由主调查 Agent 调用的 Codex 子 Agent，接收临时代码工作区、问题描述、经过裁剪和脱敏的日志证据、关键 Span、方法或协议入口【RPC/MQ/HTTP 等】以及调查预算。在限定范围内自主搜索和阅读代码、追踪跨文件调用关系，并返回结构化代码证据、根因候选、未决问题和必要的补充证据请求。主流程通过 `CodeAnalysisProvider` 与其交互，并负责上下文裁剪、结果校验和是否继续调查的决策。CodeInvestigator 不直接访问生产日志平台。
 7. LogParser：通过日志 Provider 执行受限的只读查询，定位问题日志、获取必要上下文，并完成结构化、去重、排序和脱敏。查询条件和范围由主调查 Agent 控制，所有查询及返回证据都需要记录到调查轨迹中。
 8. Verifier：统一的根因验证入口，集成 `HypothesisVerifier` 和 `RuntimeVerifier`。第一版实现 HypothesisVerifier，用于综合 Trace、日志和代码证据验证根因候选、寻找反例并识别证据缺口；需要补充调查时向主 Agent 返回请求，不自行查询生产数据或递归执行。RuntimeVerifier 第一期只保留接口，供未来接入流量回放、测试环境复现等动态验证能力；未执行运行时验证时必须明确标记，不得视为验证通过。
@@ -126,4 +126,214 @@ GitWorkspaceManager 只允许克隆受信任的内部 Git 域名，凭证通过�
 14. InvestigationStrategyProvider【一期固定实现】：为主调查 Agent 提供指定版本的调查策略。第一版只加载随应用发布的固定默认策略，不允许运行时生成、修改或发布策略；未来可接入经过离线评测和人工审核的版本化策略。
 
 ## 详细设计
+
+### 1. 技术与工程基线
+
+第一版项目使用以下工程基线：
+
+- Python 3.12，使用 `src` layout。
+- LangGraph 负责主调查状态图和流程恢复。
+- Python Codex SDK 负责 CodeInvestigator 子 Agent。
+- uv 负责 Python 版本、虚拟环境、依赖和锁文件管理。
+- 项目分发名使用 `pfinder-with-ai`，Python 包名使用 `pfinder_ai`，CLI 命令使用 `pfinder-ai`。
+- `pyproject.toml` 声明项目与依赖，`uv.lock` 锁定实际安装版本并提交到版本库，`.venv` 不提交。
+- 第一版不引入 HTTP 服务、前端框架和真实内部 API 客户端。
+
+初始运行依赖计划包括 `langgraph`、`pydantic`、`pydantic-settings`、`typer`、`rich` 和 `openai-codex`；开发依赖包括 `pytest`、`pytest-asyncio`、`ruff` 和 `mypy`。SQLite Checkpointer 相关依赖在实现持久化切片时加入，HTTP 和具体 LLM SDK 在实际对接 Provider 时加入。
+
+### 2. 分层与依赖方向
+
+项目采用 Ports and Adapters 的分层方式，但保持单体应用，不拆分为多个服务：
+
+```text
+CLI / bootstrap
+        |
+        v
+Application Service
+        |
+        +----> LangGraph nodes and routing
+        +----> Domain services
+        +----> Ports
+                    ^
+                    |
+               Adapters
+```
+
+依赖规则如下：
+
+- `domain` 只表达领域概念和规则，不依赖 LangGraph、Codex、SQLite 或公司 SDK。
+- `ports` 定义核心流程需要的能力接口，可以依赖领域模型，但不能依赖具体 Adapter。
+- `adapters` 实现 Ports，将外部返回转换为领域对象；供应商 SDK 对象不能进入 LangGraph State。
+- `services` 实现不属于单个图节点的领域协作逻辑，可以依赖 Domain 和 Ports。
+- `graph` 负责状态、节点包装、条件路由和图构建，不直接执行 Git、SQLite 或网络调用。
+- `application` 负责启动一次调查、订阅进度、恢复任务和返回结果。
+- `bootstrap.py` 是组合根，负责根据配置创建 Adapter、Service 和 LangGraph 实例。
+- `cli.py` 只负责命令行输入输出，不包含调查业务逻辑。
+
+### 3. 计划目录结构
+
+```text
+PfinderWithAI/
+|-- pyproject.toml
+|-- uv.lock
+|-- .python-version
+|-- .gitignore
+|-- .env.example
+|-- README.md
+|-- AGENTS.md
+|
+|-- docs/
+|   |-- Requirements.md
+|   |-- Design.md
+|   |-- DemoAcceptance.md
+|   `-- InvestigationStateFlow.md
+|
+|-- src/
+|   `-- pfinder_ai/
+|       |-- __init__.py
+|       |-- bootstrap.py
+|       |-- cli.py
+|       |-- config.py
+|       |
+|       |-- application/
+|       |   |-- service.py
+|       |   `-- events.py
+|       |
+|       |-- domain/
+|       |   |-- models.py
+|       |   |-- enums.py
+|       |   `-- errors.py
+|       |
+|       |-- graph/
+|       |   |-- state.py
+|       |   |-- builder.py
+|       |   |-- routing.py
+|       |   `-- nodes/
+|       |       |-- clue_extractor.py
+|       |       |-- context_resolver.py
+|       |       |-- trace_finder.py
+|       |       |-- trace_analyser.py
+|       |       |-- log_parser.py
+|       |       |-- code_investigator.py
+|       |       |-- verifier.py
+|       |       `-- result_builder.py
+|       |
+|       |-- ports/
+|       |   |-- llm.py
+|       |   |-- trace.py
+|       |   |-- logs.py
+|       |   |-- metadata.py
+|       |   |-- code_analysis.py
+|       |   |-- repository.py
+|       |   |-- verification.py
+|       |   |-- stores.py
+|       |   `-- strategy.py
+|       |
+|       |-- adapters/
+|       |   |-- fake/
+|       |   |   `-- providers.py
+|       |   |-- codex/
+|       |   |   `-- code_analysis.py
+|       |   |-- repository/
+|       |   |   `-- git_cli.py
+|       |   `-- sqlite/
+|       |       |-- investigation_store.py
+|       |       `-- checkpointer.py
+|       |
+|       |-- services/
+|       |   |-- trace_analysis.py
+|       |   |-- verification.py
+|       |   `-- workspace_manager.py
+|       |
+|       |-- monitoring/
+|       |   `-- usage.py
+|       |
+|       `-- strategies/
+|           `-- default.py
+|
+`-- tests/
+    |-- unit/
+    |-- contract/
+    |-- integration/
+    `-- fixtures/
+```
+
+目录初始化时需要为 Python package 目录添加必要的 `__init__.py`。上图只列出第一版有明确职责的文件；真实 Pfinder、日志、元数据和 LLM Adapter 等到接口能力确定后再增加，不提前创建空实现。
+
+### 4. 目录职责
+
+| 路径 | 职责 |
+| --- | --- |
+| `bootstrap.py` | 应用组合根，根据配置装配 Ports、Adapters、Services、LangGraph 和持久化组件。 |
+| `cli.py` | 实现 `pfinder-ai` 命令，收集输入、显示调查事件和用量、渲染最终报告与 JSON。 |
+| `config.py` | 读取非敏感默认配置和环境变量；真实密钥不写入配置文件或仓库。 |
+| `application/` | 提供启动、恢复和查询调查任务的应用级用例；对 CLI 隐藏 LangGraph 细节。 |
+| `domain/` | 放置 Incident、Evidence、Hypothesis、InvestigationStep、VerificationResult、DiagnosisResult 等稳定领域概念和领域错误。 |
+| `graph/` | 定义 InvestigationState、主图节点、条件边和 DecisionRouter。节点负责调用 Service 或 Port 并更新自己拥有的状态部分。 |
+| `ports/` | 使用 Python Protocol 或抽象接口描述 LLM、Trace、日志、元数据、代码分析、仓库工作区、验证和持久化能力。 |
+| `adapters/fake/` | 使用合成数据实现 Ports，优先跑通 `A -> B -> C/D` 的端到端开发和测试流程。 |
+| `adapters/codex/` | 实现 CodeAnalysisProvider，将代码调查请求映射到 Python Codex SDK，并把结果转换为领域对象。 |
+| `adapters/repository/` | 实现仓库操作 Port；第一版由 `git_cli.py` 包装本机 Git CLI。 |
+| `adapters/sqlite/` | 实现 InvestigationStore 和 LangGraph Checkpointer 的 SQLite 持久化。 |
+| `services/` | 放置 Trace 候选排序、Verifier 协调和临时工作区生命周期等跨节点协作逻辑。 |
+| `monitoring/` | 实现 UsageMonitor，收集调用次数、耗时、重试、错误和可获得的 Token/成本数据。 |
+| `strategies/` | 保存经过版本控制的固定调查策略；第一版不允许运行时修改。 |
+| `tests/unit/` | 验证纯领域逻辑、路由、节点状态更新和错误分类。 |
+| `tests/contract/` | 验证 Fake 与未来真实 Adapter 是否遵守相同的 Port 契约。 |
+| `tests/integration/` | 验证 LangGraph、SQLite、Git 工作区和 Codex 等组件组合。 |
+| `tests/fixtures/` | 保存合成或彻底匿名化的 Trace、日志和代码仓库测试数据。 |
+
+### 5. Git Adapter 与 GitWorkspaceManager 的分工
+
+`adapters/repository/git_cli.py` 不是 Git 服务，也不负责决定调查哪个仓库。它是 `RepositoryWorkspacePort` 的基础设施实现，用来把领域层的“准备指定版本代码工作区”请求转换成本机 Git CLI 操作。
+
+```text
+ContextResolver
+      |
+      v
+GitWorkspaceManager          负责策略和生命周期
+      |
+      v
+RepositoryWorkspacePort      定义核心需要的仓库能力
+      |
+      v
+GitCliRepositoryAdapter      执行 clone/fetch/checkout/rev-parse
+      |
+      v
+临时只读代码工作区
+      |
+      v
+Codex CodeInvestigator
+```
+
+职责边界如下：
+
+| 组件 | 职责 |
+| --- | --- |
+| ContextResolver | 提供系统对应的 Git 地址和期望版本，不执行 Git 命令。 |
+| GitWorkspaceManager | 校验受信任域名、选择浅克隆策略、创建临时目录、记录版本假设、控制工作区生命周期并确保最终清理。 |
+| RepositoryWorkspacePort | 定义准备工作区、解析实际 commit 和释放工作区所需的抽象能力，不暴露 subprocess 或 Git SDK 类型。 |
+| GitCliRepositoryAdapter | 使用参数化的 Git 子进程执行必要命令，将退出码和标准错误映射为领域错误，并返回实际 checkout commit。 |
+| CodeInvestigator | 只消费已准备好的工作区路径及版本信息，以只读沙箱分析代码。 |
+
+GitCliRepositoryAdapter 第一版遵守以下约束：
+
+- 不使用 `shell=True` 或拼接字符串命令，所有 Git 参数以参数数组传递。
+- 不把用户名、Token 或其他凭证拼入仓库 URL、日志或模型输入。
+- 默认浅克隆指定版本，不递归获取 submodule，不拉取 Git LFS 大文件。
+- 不执行仓库脚本、构建命令、测试命令或 Git hook。
+- 记录实际 commit，用于生成可复现的代码证据引用。
+- Git 失败时返回结构化错误，由上层重试或降级，不在 Adapter 中猜测其他仓库或版本。
+
+### 6. 第一阶段搭建范围
+
+项目结构初始化只完成以下内容：
+
+- uv 项目、Python package、CLI 入口和基础配置。
+- Domain、Ports、Graph、Adapters 和 Services 的目录及最小可导入骨架。
+- Fake Providers 和一个合成调查场景，用于验证依赖装配与状态流转。
+- 基础单元测试、格式检查、静态类型检查和可直接运行的命令。
+- README 和 AGENTS.md 中的安装、运行、检查和测试说明。
+
+初始化阶段不对接 Pfinder、生产日志、系统元数据或真实 LLMProvider，也不实现 HTTP API、前端、RuntimeVerifier 和 Case Memory。
 
