@@ -93,6 +93,14 @@ class GitWorkspaceManager:
 
         parsed = urlparse(repository_url)
         if parsed.hostname:
+            if parsed.scheme.casefold() in {"http", "https"} and (
+                parsed.username or parsed.password
+            ):
+                raise ProviderError(
+                    "HTTP Git 仓库地址不能内嵌用户名、令牌或密码",
+                    kind=ErrorKind.INVALID_INPUT,
+                    retryable=False,
+                )
             return parsed.hostname
 
         scp_match = self._SCP_HOST_PATTERN.match(repository_url)

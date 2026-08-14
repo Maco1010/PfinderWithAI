@@ -82,3 +82,28 @@ def test_untrusted_git_host_is_rejected(tmp_path: Path) -> None:
         assert error.value.kind is ErrorKind.UNAUTHORIZED
 
     asyncio.run(run_case())
+
+
+def test_http_repository_url_with_embedded_credentials_is_rejected(
+    tmp_path: Path,
+) -> None:
+    """HTTP 地址中的用户名或令牌不能进入 Git 命令、日志或模型上下文。"""
+
+    async def run_case() -> None:
+        manager = GitWorkspaceManager(
+            StubRepositoryAdapter(),
+            trusted_hosts=frozenset({"git.example.local"}),
+            base_directory=tmp_path,
+        )
+        context = SystemContext(
+            system="system-d",
+            repository_url="https://secret@git.example.local/system-d.git",
+        )
+
+        with pytest.raises(ProviderError) as error:
+            async with manager.prepare(context):
+                pass
+
+        assert error.value.kind is ErrorKind.INVALID_INPUT
+
+    asyncio.run(run_case())
