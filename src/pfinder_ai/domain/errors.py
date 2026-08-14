@@ -1,4 +1,4 @@
-"""Structured exceptions that may safely cross application boundaries."""
+"""可以安全跨越应用边界传递的结构化异常。"""
 
 from collections.abc import Mapping
 from typing import Any
@@ -7,11 +7,10 @@ from pfinder_ai.domain.enums import ErrorKind
 
 
 class PfinderAIError(Exception):
-    """Base exception with retry semantics and non-sensitive context.
+    """包含重试语义和非敏感上下文的基础异常。
 
-    Adapters should translate vendor exceptions into this hierarchy. The
-    ``context`` mapping must contain identifiers or summaries only; raw logs,
-    credentials, and customer data must never be attached to an exception.
+    Adapter 应将供应商异常转换为该异常体系。``context`` 只能保存标识符
+    或摘要，禁止附加原始日志、访问凭证和客户数据。
     """
 
     def __init__(
@@ -29,7 +28,7 @@ class PfinderAIError(Exception):
 
 
 class InvalidInvestigationInputError(PfinderAIError):
-    """Raised when required user input is missing or inconsistent."""
+    """缺少必要输入或输入相互矛盾时抛出。"""
 
     def __init__(self, message: str, *, context: Mapping[str, Any] | None = None) -> None:
         super().__init__(
@@ -41,11 +40,11 @@ class InvalidInvestigationInputError(PfinderAIError):
 
 
 class ProviderError(PfinderAIError):
-    """Normalized failure returned by an external provider adapter."""
+    """外部 Provider Adapter 返回的标准化异常。"""
 
 
 class StructuredOutputError(PfinderAIError):
-    """Raised when a model response cannot be parsed into its declared schema."""
+    """模型结果无法解析为声明的结构时抛出。"""
 
     def __init__(self, message: str, *, context: Mapping[str, Any] | None = None) -> None:
         super().__init__(
@@ -57,7 +56,7 @@ class StructuredOutputError(PfinderAIError):
 
 
 class BudgetExceededError(PfinderAIError):
-    """Raised when an investigation reaches a configured execution budget."""
+    """调查达到配置的执行预算时抛出。"""
 
     def __init__(self, message: str, *, context: Mapping[str, Any] | None = None) -> None:
         super().__init__(
@@ -66,4 +65,3 @@ class BudgetExceededError(PfinderAIError):
             retryable=False,
             context=context,
         )
-

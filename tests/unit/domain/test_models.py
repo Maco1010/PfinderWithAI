@@ -1,4 +1,4 @@
-"""Unit tests for invariants enforced at the domain boundary."""
+"""验证领域边界强制执行的数据不变量。"""
 
 from datetime import UTC, datetime, timedelta
 
@@ -10,7 +10,7 @@ from pfinder_ai.domain.models import InvestigationTarget, TimeRange
 
 
 def test_time_range_rejects_inverted_exact_range() -> None:
-    """An inverted range would otherwise produce misleading log queries."""
+    """拒绝可能导致错误日志查询的倒置时间范围。"""
 
     end = datetime.now(UTC)
     with pytest.raises(ValidationError):
@@ -18,7 +18,7 @@ def test_time_range_rejects_inverted_exact_range() -> None:
 
 
 def test_investigation_target_records_candidate_source() -> None:
-    """A queue target records its origin so NextHop is not used ambiguously."""
+    """候选目标必须记录来源，避免把普通候选切换误写为 NextHop。"""
 
     target = InvestigationTarget(
         target_id="trace-1:span-2",

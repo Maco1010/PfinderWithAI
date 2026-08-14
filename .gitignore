@@ -1,25 +1,24 @@
-# Python bytecode and tool caches
+# Python 字节码和工具缓存
 __pycache__/
 *.py[cod]
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
 
-# Local environments and build outputs
+# 本地虚拟环境和构建产物
 .venv/
 build/
 dist/
 *.egg-info/
 
-# Local configuration and investigation runtime data
+# 本地配置和调查运行时数据
 .env
 .pfinder/
 *.sqlite
 *.sqlite3
 
-# Editors and operating systems
+# 编辑器和操作系统文件
 .idea/
 .vscode/
 .DS_Store
 Thumbs.db
-

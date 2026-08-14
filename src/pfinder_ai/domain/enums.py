@@ -1,10 +1,10 @@
-"""Enumerations shared by domain models and workflow routing."""
+"""领域模型与流程路由共享的枚举。"""
 
 from enum import StrEnum
 
 
 class EvidenceSource(StrEnum):
-    """Origin of a fact used to support or reject a hypothesis."""
+    """用于支持或否定根因假设的证据来源。"""
 
     TRACE = "trace"
     LOG = "log"
@@ -13,7 +13,7 @@ class EvidenceSource(StrEnum):
 
 
 class TargetSource(StrEnum):
-    """How an investigation target entered the ordered target queue."""
+    """调查目标进入有序候选队列的来源。"""
 
     START_SYSTEM = "start_system"
     TRACE_CANDIDATE = "trace_candidate"
@@ -21,7 +21,7 @@ class TargetSource(StrEnum):
 
 
 class VerificationStatus(StrEnum):
-    """Outcome of checking a hypothesis against the available evidence."""
+    """使用现有证据验证根因假设后的结果。"""
 
     PASSED = "passed"
     NEEDS_EVIDENCE = "needs_evidence"
@@ -29,7 +29,7 @@ class VerificationStatus(StrEnum):
 
 
 class ConclusionStatus(StrEnum):
-    """Evidence strength exposed to users in the final diagnosis."""
+    """最终诊断向用户展示的证据充分程度。"""
 
     VERIFIED = "verified"
     SUPPORTED_HYPOTHESIS = "supported_hypothesis"
@@ -37,7 +37,7 @@ class ConclusionStatus(StrEnum):
 
 
 class ExecutionStatus(StrEnum):
-    """Lifecycle status of the workflow, independent of diagnosis quality."""
+    """工作流执行状态，与诊断结论是否充分相互独立。"""
 
     RUNNING = "running"
     WAITING_INPUT = "waiting_input"
@@ -46,7 +46,7 @@ class ExecutionStatus(StrEnum):
 
 
 class NextAction(StrEnum):
-    """Actions the decision router can request after verification."""
+    """验证结束后，决策路由可以请求的后续动作。"""
 
     GATHER_LOGS = "gather_logs"
     INVESTIGATE_CODE = "investigate_code"
@@ -56,7 +56,7 @@ class NextAction(StrEnum):
 
 
 class ErrorKind(StrEnum):
-    """Stable error categories used by retry and degradation policies."""
+    """重试和降级策略使用的稳定错误分类。"""
 
     INVALID_INPUT = "invalid_input"
     TRANSIENT = "transient"
@@ -65,4 +65,3 @@ class ErrorKind(StrEnum):
     INVALID_RESPONSE = "invalid_response"
     BUDGET_EXCEEDED = "budget_exceeded"
     INTERNAL = "internal"
-

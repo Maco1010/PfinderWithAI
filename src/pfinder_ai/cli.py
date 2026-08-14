@@ -1,17 +1,15 @@
-"""Command-line entry point for the local PfinderWithAI Demo.
+"""PfinderWithAI 本地 Demo 的命令行入口。
 
-The real command implementation is added with the application module. Keeping
-this entry point dependency-free makes the initial project package installable
-before external adapters are configured.
+完整命令会在应用层模块中实现。当前入口不依赖外部组件，确保尚未配置
+任何 Adapter 时，项目包仍然可以安装并验证入口是否可用。
 """
 
 
 def main() -> None:
-    """Confirm that the project package and console entry point are available."""
+    """确认项目包和控制台入口可以正常加载。"""
 
     print("PfinderWithAI project skeleton is ready.")
 
 
 if __name__ == "__main__":
     main()
-

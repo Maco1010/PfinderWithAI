@@ -1,8 +1,7 @@
-"""Core data contracts for evidence-driven incident investigation.
+"""证据驱动故障调查使用的核心数据契约。
 
-These models intentionally store summaries and source locators instead of raw
-production payloads. Provider-specific responses are converted into these
-types before entering the LangGraph state or InvestigationStore.
+这些模型只保存摘要和来源定位，不保存原始生产数据。任何 Provider 专用
+响应都必须先转换为这些类型，才能进入 LangGraph State 或 InvestigationStore。
 """
 
 from datetime import UTC, datetime
@@ -23,13 +22,13 @@ from pfinder_ai.domain.enums import (
 
 
 class DomainModel(BaseModel):
-    """Strict immutable base class for values shared across workflow steps."""
+    """跨流程步骤传递的严格、不可变领域模型基类。"""
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
 
 class TimeRange(DomainModel):
-    """Optional exact or human-provided time window for log and trace queries."""
+    """日志和 Trace 查询使用的精确时间范围或自然语言时间描述。"""
 
     start: datetime | None = None
     end: datetime | None = None
@@ -37,7 +36,7 @@ class TimeRange(DomainModel):
 
     @model_validator(mode="after")
     def validate_order(self) -> "TimeRange":
-        """Reject inverted exact ranges while allowing approximate text input."""
+        """拒绝起止时间倒置，同时允许只提供模糊时间描述。"""
 
         if self.start is not None and self.end is not None and self.start > self.end:
             raise ValueError("time range start must not be after end")
@@ -45,7 +44,7 @@ class TimeRange(DomainModel):
 
 
 class IncidentInput(DomainModel):
-    """Normalized problem statement produced by the clue extraction step."""
+    """ClueExtractor 生成的标准化问题输入。"""
 
     description: str = Field(min_length=1)
     business_keys: dict[str, str] = Field(default_factory=dict)
@@ -57,7 +56,7 @@ class IncidentInput(DomainModel):
 
 
 class SystemContext(DomainModel):
-    """Deterministic metadata used to reach a system's evidence sources."""
+    """用于访问目标系统各类证据源的确定性元数据。"""
 
     system: str = Field(min_length=1)
     repository_url: str | None = None
@@ -69,7 +68,7 @@ class SystemContext(DomainModel):
 
 
 class TraceSpan(DomainModel):
-    """Provider-neutral summary of a span relevant to investigation."""
+    """与 Provider 无关的待调查 Span 摘要。"""
 
     span_id: str = Field(min_length=1)
     parent_span_id: str | None = None
@@ -81,7 +80,7 @@ class TraceSpan(DomainModel):
 
 
 class TraceCandidate(DomainModel):
-    """A possible request trace and the score explaining its relevance."""
+    """候选请求 Trace，以及解释其相关性的匹配分数。"""
 
     trace_id: str = Field(min_length=1)
     match_score: float = Field(ge=0, le=1)
@@ -90,7 +89,7 @@ class TraceCandidate(DomainModel):
 
 
 class InvestigationTarget(DomainModel):
-    """One system or dependency queued for evidence collection."""
+    """等待收集证据的系统或依赖目标。"""
 
     target_id: str = Field(min_length=1)
     system: str = Field(min_length=1)
@@ -102,7 +101,7 @@ class InvestigationTarget(DomainModel):
 
 
 class Evidence(DomainModel):
-    """Redacted fact with enough source information to reproduce the finding."""
+    """已经脱敏且包含足够来源定位、可以复核的事实。"""
 
     evidence_id: str = Field(min_length=1)
     source: EvidenceSource
@@ -115,7 +114,7 @@ class Evidence(DomainModel):
 
 
 class Hypothesis(DomainModel):
-    """A falsifiable root-cause candidate linked to explicit evidence."""
+    """关联明确证据、可以被证伪的根因候选。"""
 
     hypothesis_id: str = Field(min_length=1)
     statement: str = Field(min_length=1)
@@ -127,7 +126,7 @@ class Hypothesis(DomainModel):
 
 
 class VerificationResult(DomainModel):
-    """Result of checking a hypothesis against trace, log, and code evidence."""
+    """使用 Trace、日志和代码证据验证根因假设的结果。"""
 
     status: VerificationStatus
     summary: str = Field(min_length=1)
@@ -139,7 +138,7 @@ class VerificationResult(DomainModel):
 
 
 class NextHop(DomainModel):
-    """Dependency discovered outside the current trace candidate queue."""
+    """在当前 Trace 候选队列之外新发现的依赖。"""
 
     target_system: str = Field(min_length=1)
     reason: str = Field(min_length=1)
@@ -148,7 +147,7 @@ class NextHop(DomainModel):
 
 
 class InvestigationErrorRecord(DomainModel):
-    """Safe error details stored in checkpoints and audit history."""
+    """可安全写入检查点和审计轨迹的错误信息。"""
 
     kind: ErrorKind
     message: str = Field(min_length=1)
@@ -159,7 +158,7 @@ class InvestigationErrorRecord(DomainModel):
 
 
 class UsageRecord(DomainModel):
-    """Non-sensitive usage metadata for one provider operation."""
+    """单次 Provider 操作产生的非敏感用量信息。"""
 
     provider: str = Field(min_length=1)
     operation: str = Field(min_length=1)
@@ -174,7 +173,7 @@ class UsageRecord(DomainModel):
 
 
 class UsageSummary(DomainModel):
-    """Aggregated usage attached to the diagnosis without raw requests."""
+    """附加到诊断结果的聚合用量，不包含原始请求。"""
 
     calls: int = Field(default=0, ge=0)
     duration_ms: float = Field(default=0, ge=0)
@@ -185,7 +184,7 @@ class UsageSummary(DomainModel):
 
 
 class InvestigationStep(DomainModel):
-    """Auditable record of one query, finding, decision, and next action."""
+    """一次查询、发现、判断和后续动作组成的可审计记录。"""
 
     step_id: str = Field(min_length=1)
     name: str = Field(min_length=1)
@@ -198,7 +197,7 @@ class InvestigationStep(DomainModel):
 
 
 class DiagnosisResult(DomainModel):
-    """Final user-facing diagnosis and its complete evidence trail."""
+    """面向用户的最终诊断及其完整证据轨迹。"""
 
     execution_status: ExecutionStatus
     conclusion_status: ConclusionStatus
@@ -212,4 +211,3 @@ class DiagnosisResult(DomainModel):
     recommended_actions: tuple[str, ...] = ()
     termination_reason: str = Field(min_length=1)
     usage: UsageSummary = Field(default_factory=UsageSummary)
-
