@@ -9,12 +9,13 @@ PfinderWithAI 是一个面向企业级微服务场景的根因定位 Agent。它
 ## 技术栈与命令
 
 - Python 3.12，使用 uv 管理项目和锁文件。
-- LangGraph 负责主调查状态图，Pydantic 负责领域与结构化输出校验。
+- LangGraph 负责主调查状态图，Pydantic 负责领域与结构化输出校验，HTTPX 负责模型网关的受控 HTTP 调用。
 - Typer/Rich 提供 CLI，SQLite 保存本地调查轨迹。
 - 安装：`uv sync --dev`
 - 格式与静态检查：`uv run ruff check src tests`、`uv run mypy src/pfinder_ai`
 - 测试：`uv run pytest tests -q`
 - Fake Demo：`uv run pfinder-ai investigate "订单创建失败" --start-system system-a --trace-id trace-synthetic`
+- 真实 ClueExtractor Smoke（需要本地模型网关配置，仅使用合成或脱敏输入）：`uv run python tests/manual/smoke_clue_extractor.py`
 
 新增或修改 Python 注释和 docstring 时统一使用中文；标识符、协议字段和第三方 API 名称保持其规范写法。
 

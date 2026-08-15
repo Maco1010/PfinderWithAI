@@ -139,7 +139,7 @@ GitWorkspaceManager 只允许克隆受信任的内部 Git 域名，凭证通过�
 - `pyproject.toml` 声明项目与依赖，`uv.lock` 锁定实际安装版本并提交到版本库，`.venv` 不提交。
 - 第一版不引入 HTTP 服务、前端框架和真实内部 API 客户端。
 
-初始运行依赖计划包括 `langgraph`、`pydantic`、`pydantic-settings`、`typer`、`rich` 和 `openai-codex`；开发依赖包括 `pytest`、`pytest-asyncio`、`ruff` 和 `mypy`。SQLite Checkpointer 相关依赖在实现持久化切片时加入，HTTP 和具体 LLM SDK 在实际对接 Provider 时加入。
+运行依赖包括 `langgraph`、`httpx`、`pydantic`、`pydantic-settings`、`typer`、`rich` 和 `openai-codex`；开发依赖包括 `pytest`、`pytest-asyncio`、`ruff` 和 `mypy`。模型网关通过轻量 HTTP Adapter 接入，不把供应商 SDK 类型带入核心流程。SQLite Checkpointer 相关依赖在实现持久化切片时加入。
 
 ### 2. 分层与依赖方向
 
@@ -344,15 +344,14 @@ GitCliRepositoryAdapter 第一版遵守以下约束：
 
 ### 7. 当前骨架落地状态
 
-截至 2026-08-15，目录骨架、领域模型、Ports、LangGraph 主图、Fake 纵向链路、Git CLI Adapter、Codex SDK Adapter、SQLite InvestigationStore、UsageMonitor、应用服务和 CLI 已落地。Fake CLI 可以从合成输入运行到结构化诊断结果，并保存输入、步骤和结果。
+截至 2026-08-15，目录骨架、领域模型、Ports、LangGraph 主图、Fake 纵向链路、Git CLI Adapter、Codex SDK Adapter、GatewayLLMProvider、SQLite InvestigationStore、UsageMonitor、应用服务和 CLI 已落地。CLI 可以使用合成 Trace、日志和代码运行到结构化诊断结果；默认禁用真实模型，也可以显式启用模型网关供 ClueExtractor 使用。
 
 以下内容仍是明确缺口，不应被描述为已经可用：
 
-- 公司内部 Pfinder、日志、元数据和 LLM API 的真实 Adapter。
+- 公司内部 Pfinder、日志和元数据的真实 Adapter。
 - LangGraph SQLite Checkpointer；现有 SQLite Adapter 只实现 InvestigationStore。
 - CLI 对真实 Codex 和企业数据源的装配及账号联调。
 - 所有 Provider 的 UsageMonitor 统一代理和单次调查用量回写。
 - RuntimeVerifier、HTTP API、前端、权限平台和运行时 Case Memory。
 
 跨设备开发上下文保存到仓库根目录的 `memory/`。该目录只记录项目级事实、决策和接力说明，禁止写入真实日志、凭证、内部地址或客户数据，也不能替代未来的 `CaseMemoryProvider`。
-

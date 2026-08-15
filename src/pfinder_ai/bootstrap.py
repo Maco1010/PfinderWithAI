@@ -9,6 +9,7 @@ from pfinder_ai.adapters.fake import (
     FakeRepositoryAdapter,
     FakeTraceProvider,
 )
+from pfinder_ai.adapters.llm import GatewayLLMProvider, GatewayLLMSettings
 from pfinder_ai.adapters.sqlite import SQLiteInvestigationStore
 from pfinder_ai.application import (
     InvestigationApplicationService,
@@ -27,6 +28,7 @@ from pfinder_ai.graph.builder import build_investigation_graph
 from pfinder_ai.graph.dependencies import GraphDependencies
 from pfinder_ai.graph.policy import GraphExecutionPolicy
 from pfinder_ai.monitoring import UsageMonitor
+from pfinder_ai.ports.llm import LLMProvider
 from pfinder_ai.services.workspace_manager import GitWorkspaceManager
 
 
@@ -44,7 +46,7 @@ def build_application(
     *,
     event_sink: InvestigationEventSink | None = None,
 ) -> ApplicationBundle:
-    """装配当前唯一可运行的全合成 Demo 模式。"""
+    """装配合成数据源，并按显式配置选择是否调用真实模型网关。"""
 
     resolved_settings = settings or AppSettings()
     if resolved_settings.runtime_mode != "fake":
@@ -52,6 +54,7 @@ def build_application(
 
     store = SQLiteInvestigationStore(resolved_settings.database_path)
     usage_monitor = UsageMonitor()
+    llm = build_llm_provider(resolved_settings, usage_monitor)
     repository = FakeRepositoryAdapter()
     metadata = FakeMetadataProvider(
         {
@@ -125,6 +128,7 @@ def build_application(
             max_provider_calls=resolved_settings.max_provider_calls,
             max_elapsed_seconds=resolved_settings.max_elapsed_seconds,
         ),
+        llm=llm,
         trace_candidate_limit=resolved_settings.trace_candidate_limit,
         log_max_entries=resolved_settings.log_max_entries,
     )
@@ -138,5 +142,36 @@ def build_application(
     return ApplicationBundle(
         service=service,
         store=store,
+        usage_monitor=usage_monitor,
+    )
+
+
+def build_llm_provider(
+    settings: AppSettings,
+    usage_monitor: UsageMonitor,
+) -> LLMProvider | None:
+    """根据显式配置构造主流程模型 Provider，默认保持禁用。"""
+
+    if settings.llm_provider == "disabled":
+        return None
+    if (
+        settings.llm_base_url is None
+        or settings.llm_api_key is None
+        or settings.llm_model is None
+    ):
+        raise ValueError("模型网关配置不完整")
+    return GatewayLLMProvider(
+        GatewayLLMSettings(
+            base_url=settings.llm_base_url,
+            api_key=settings.llm_api_key,
+            model=settings.llm_model,
+            protocol=settings.llm_protocol,
+            auth_style=settings.llm_auth_style,
+            timeout_seconds=settings.llm_timeout_seconds,
+            max_tokens=settings.llm_max_tokens,
+            max_retries=settings.llm_max_retries,
+            retry_backoff_seconds=settings.llm_retry_backoff_seconds,
+            allow_insecure_http=settings.llm_allow_insecure_http,
+        ),
         usage_monitor=usage_monitor,
     )

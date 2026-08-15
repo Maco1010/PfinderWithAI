@@ -501,6 +501,7 @@ name = "pfinder-with-ai"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
+    { name = "httpx" },
     { name = "langgraph" },
     { name = "openai-codex" },
     { name = "pydantic" },
@@ -519,6 +520,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "httpx", specifier = ">=0.28" },
     { name = "langgraph", specifier = ">=1.0" },
     { name = "openai-codex" },
     { name = "pydantic", specifier = ">=2.10" },

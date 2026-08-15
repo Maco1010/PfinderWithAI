@@ -5,6 +5,7 @@ description = "Evidence-driven root-cause investigation agent for microservice s
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
 dependencies = [
+    "httpx>=0.28",
     "langgraph>=1.0",
     "openai-codex",
     "pydantic>=2.10",
@@ -47,4 +48,3 @@ select = ["B", "E", "F", "I", "UP"]
 python_version = "3.12"
 strict = true
 packages = ["pfinder_ai"]
-
