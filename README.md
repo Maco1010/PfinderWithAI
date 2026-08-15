@@ -24,7 +24,7 @@ PfinderWithAI 是一个面向企业微服务场景的证据驱动根因定位 Ag
 - RuntimeVerifier 实现、HTTP API、前端、权限控制和运行时 Case Memory。
 - 所有 Provider 的统一 UsageMonitor 包装；当前已提供模型网关、Codex 接入点和监控组件。
 
-这些缺口记录在 [docs/TODO.md](docs/TODO.md)。产品范围见 [docs/Requirements.md](docs/Requirements.md)，架构与流程见 [docs/Design.md](docs/Design.md) 和 [docs/InvestigationStateFlow.md](docs/InvestigationStateFlow.md)。
+这些缺口记录在 [docs/TODO.md](docs/TODO.md)。产品范围见 [docs/Requirements.md](docs/Requirements.md)，架构与流程见 [docs/Design.md](docs/Design.md) 和 [docs/InvestigationStateFlow.md](docs/InvestigationStateFlow.md)，Pfinder 元数据接口梳理见 [docs/PfinderMetadataAPI.md](docs/PfinderMetadataAPI.md)。
 
 ## 环境要求
 
